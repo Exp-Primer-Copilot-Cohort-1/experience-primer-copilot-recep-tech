@@ -1,34 +1,43 @@
 // Create web server
-// 1. Load the http module
-var http = require('http');
-var url = require('url');
-var fs = require('fs');
-var qs = require('querystring');
+const express = require('express');
+const app = express();
+const path = require('path');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const port = 3000;
 
-// 2. Create an HTTP server to handle responses
-http.createServer(function (req, res) {
-  var pathname = url.parse(req.url).pathname;
-  console.log("Request for " + pathname + " received.");
+// Set view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-  // 3. Read the requested file content from file system
-  fs.readFile(pathname.substr(1), function (err, data) {
-    if (err) {
-      console.log(err);
-      // HTTP Status: 404 : NOT FOUND
-      // Content Type: text/plain
-      res.writeHead(404, {'Content-Type': 'text/html'});
-    } else {
-      // Page found
-      // HTTP Status: 200 : OK
-      // Content Type: text/plain
-      res.writeHead(200, {'Content-Type': 'text/html'});
+// Use body-parser
+app.use(bodyParser.urlencoded({extended: false}));
 
-      // Write the content of the file to response body
-      res.write(data.toString());
-    }
-    // Send the response body
-    res.end();
-  });
-}).listen(8080);
+// Use static files
+app.use(express.static('public'));
 
-console.log('Server running at http://
+// Get data from file
+let data = fs.readFileSync('data.json');
+let comments = JSON.parse(data);
+
+// Render the main page
+app.get('/', (req, res) => {
+    res.render('index', {comments: comments});
+});
+
+// Add new comment
+app.post('/add', (req, res) => {
+    let newComment = {
+        name: req.body.name,
+        comment: req.body.comment,
+        date: new Date().toLocaleString()
+    };
+    comments.push(newComment);
+    fs.writeFileSync('data.json', JSON.stringify(comments));
+    res.render('index', {comments: comments});
+});
+
+// Listen to a port
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
